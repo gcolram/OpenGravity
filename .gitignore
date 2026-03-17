@@ -1,0 +1,16 @@
+node_modules/
+.env
+service-account.json
+memory.db
+memory.db-wal
+memory.db-shm
+dist/
+ts-error.txt
+ts-error-utf8.txt
+error-run.txt
+error-run2.txt
+execution-error2.txt
+execution-error.txt
+errors.txt
+errors-utf8.txt
+opengravity.zip
