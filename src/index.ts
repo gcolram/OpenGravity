@@ -27,6 +27,16 @@ bot.command('start', async (ctx) => {
     await ctx.reply("¡Hola! Soy OpenGravity, tu asistente personal local de IA basado en Telegram.\n¿En qué puedo ayudarte hoy?");
 });
 
+// Comando /clear para borrar el historial
+import { clearHistory } from './memory/db.js';
+bot.command('clear', async (ctx) => {
+    const userId = ctx.from?.id;
+    if (userId) {
+        await clearHistory(userId);
+        await ctx.reply("🧹 Historial borrado. Tu contexto conversacional está limpio.");
+    }
+});
+
 // Manejador principal de mensajes de texto e imágenes
 bot.on(['message:text', 'message:photo'], async (ctx) => {
     const userId = ctx.from.id;

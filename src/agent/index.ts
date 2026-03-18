@@ -198,9 +198,13 @@ export async function processUserMessage(userId: number, text: string, imageUrl?
                 }
             }
 
-            return `Ocurrió un error en mi procesamiento interno: ${error.message}`;
+            const errorMsg = `Ocurrió un error en mi procesamiento interno: ${error.message}`;
+            await addMessage(userId, 'assistant', errorMsg);
+            return errorMsg;
         }
     }
 
-    return "He alcanzado el límite máximo de reflexión y llamadas a herramientas (5 iteraciones). Abortando para evitar bucles infinitos.";
+    const abortMsg = "He alcanzado el límite máximo de reflexión y llamadas a herramientas (8 iteraciones). Abortando para evitar bucles infinitos.";
+    await addMessage(userId, 'assistant', abortMsg);
+    return abortMsg;
 }
