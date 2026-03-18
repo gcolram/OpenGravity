@@ -10,6 +10,7 @@ export const config = {
     GROQ_API_KEY: process.env.GROQ_API_KEY || '',
     OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || '',
     OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
+    XAI_API_KEY: process.env.XAI_API_KEY || '',
     TAVILY_API_KEY: process.env.TAVILY_API_KEY || '',
     OPENROUTER_MODEL: process.env.OPENROUTER_MODEL || 'openrouter/free',
     DB_PATH: process.env.DB_PATH || './memory.db',
