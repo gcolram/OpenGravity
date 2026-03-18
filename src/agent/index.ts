@@ -37,12 +37,33 @@ export async function processUserMessage(userId: number, text: string, imageUrl?
     const history = await getHistory(userId, 15);
 
     // 3. Preparar el array de mensajes en memoria para este bucle de razonamiento
+    let activeModel = modelName;
+    if (imageUrl) {
+        if (groq) {
+            activeModel = 'llama-3.2-90b-vision-preview';
+        } else {
+            const isVisionModel = /vision|gemini|gpt-4o|claude-3|pixtral|llava/i.test(modelName);
+            if (!isVisionModel) {
+                console.log(`[Agente] El modelo ${modelName} podría no soportar visión. Cambiando a google/gemini-2.5-flash temporalmente.`);
+                activeModel = 'google/gemini-2.5-flash';
+            }
+        }
+    }
+
     const messages: any[] = [
         { role: 'system', content: SYSTEM_PROMPT },
-        ...history.map((msg: ChatMessage) => ({
-            role: msg.role,
-            content: msg.content,
-        }))
+        ...history.map((msg: ChatMessage) => {
+            let contentContent = msg.content;
+            // Si el mensaje del historial tiene un array (imagen) y estamos usando un modelo que quizás no sea de visión, extraemos solo el texto
+            if (Array.isArray(contentContent) && !imageUrl) {
+                const textObj = contentContent.find(c => c.type === 'text');
+                contentContent = textObj ? textObj.text : '[Imagen enviada previamente]';
+            }
+            return {
+                role: msg.role,
+                content: contentContent,
+            };
+        })
     ];
 
     const maxIterations = 5;
@@ -55,7 +76,7 @@ export async function processUserMessage(userId: number, text: string, imageUrl?
             // Llamada al LLM
             const completion = await client.chat.completions.create({
                 messages,
-                model: modelName,
+                model: activeModel,
                 tools: tools as any[],
                 tool_choice: 'auto',
             });
