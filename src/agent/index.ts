@@ -16,8 +16,8 @@ const openaiDirect = config.OPENAI_API_KEY ? new OpenAI({
 if (!groq && !openrouter && !openaiDirect) {
     throw new Error('No LLM client configured. Please set GROQ_API_KEY, OPENROUTER_API_KEY or OPENAI_API_KEY in .env');
 }
-
-const SYSTEM_PROMPT = `Eres OpenGravity, un asistente de inteligencia artificial personal seguro y útil, que funciona localmente a través de Telegram.
+const SYSTEM_PROMPT = () => `Eres OpenGravity, un asistente de inteligencia artificial personal seguro y útil, que funciona localmente a través de Telegram.
+La fecha y hora de tu sistema operativo actual es: ${new Date().toLocaleString('es-ES')}.
 Responde de manera concisa y útil. TIENES ACCESO A INTERNET Y A UN NAVEGADOR AUTÓNOMO.
 
 CAPACIDADES DEL NAVEGADOR (WEB AGENT):
@@ -123,8 +123,8 @@ export async function processUserMessage(userId: number, text: string, imageUrl?
                 return "Error: No se recibió respuesta del modelo.";
             }
 
-            // Añadir el mensaje del asistente a la memoria temporal, SANITIZADO para que Groq no crashee con propiedades de OpenAI (ej. 'annotations')
-            const safeMessage: any = { role: responseMessage.role, content: responseMessage.content };
+            // Añadir el mensaje del asistente a la memoria temporal, SANITIZADO para evitar cuelgues (ej. content null)
+            const safeMessage: any = { role: responseMessage.role, content: responseMessage.content || "" };
             if (responseMessage.tool_calls) safeMessage.tool_calls = responseMessage.tool_calls;
             messages.push(safeMessage);
 
