@@ -4,18 +4,18 @@ export const browserAutomationTool = {
     type: 'function',
     function: {
         name: 'browser_automation',
-        description: 'Navegador Web Autónomo. Usa esto para visitar webs, hacer click en botones, rellenar formularios, leer datos o hacer gestiones complejas por el usuario.',
+        description: 'Abre un navegador real (Chrome) y controla páginas web. USA ESTA HERRAMIENTA SIEMPRE que el usuario pida: navegar a una URL concreta, hacer login, rellenar formularios, hacer clicks en botones, extraer datos de una web específica, o realizar gestiones en portales de internet. Es tu principal herramienta de acción en internet, no search_web.',
         parameters: {
             type: 'object',
             properties: {
                 action: {
                     type: 'string',
                     enum: ['goto', 'act', 'extract', 'observe', 'close'],
-                    description: 'La acción: "goto" (navegar a URL), "act" (hacer click, escribir, interactuar: ej. "fill email with x"), "extract" (leer datos: ej. "coge la lista de precios"), "observe" (ver elementos interactivos), "close" (cerrar navegador).'
+                    description: '"goto": ir a URL. "act": hacer click/escribir (ej: "click on the login button", "fill email with user@email.com"). "extract": leer datos de la pantalla. "observe": ver qué elementos interactivos hay disponibles. "close": cerrar y liberar RAM.'
                 },
                 target: {
                     type: 'string',
-                    description: 'El objetivo: Una URL válida si es "goto", o una instrucción natural precisa en inglés o español si es "act", "extract" o "observe". Vacio para "close".'
+                    description: 'URL completa si es "goto" (ej: https://www.adeslas.es). Instrucción en inglés concreta si es "act"/"extract"/"observe" (ej: "click on Acceso pacientes button"). Dejar en blanco para "close".'
                 }
             },
             required: ['action', 'target'],
@@ -34,28 +34,30 @@ export async function executeBrowserAutomation(userId: number, args: { action: s
         const stagehand = await getBrowserSession(userId);
 
         if (args.action === 'goto') {
-            await stagehand.page.goto(args.target);
-            return `Navegación exitosa a ${args.target}. La página se ha cargado. Puedes usar 'observe' para ver qué botones hay, o 'act' para interactuar.`;
+            // Usar el contexto de Playwright directamente para la navegación
+            const pages = stagehand.context.pages();
+            const page = pages.length > 0 ? pages[0] : await stagehand.context.newPage();
+            await page.goto(args.target, { waitUntil: 'networkidle', timeout: 30000 });
+            const pageTitle = await page.title();
+            return `Navegación exitosa a ${args.target}. Título de la página: "${pageTitle}". Usa 'observe' para ver qué botones/links hay, o 'act' para interactuar directamente.`;
         }
         else if (args.action === 'act') {
-            const result = await stagehand.page.act(args.target);
-            return `Acción ejecutada: "${args.target}". Resultado/Feedback de la UI: ${JSON.stringify(result)}\n\n(Puedes encadenar más acciones, o usar 'extract'/'observe' para ver la pantalla).`;
+            const result = await stagehand.act(args.target);
+            return `Acción ejecutada: "${args.target}". Resultado: ${JSON.stringify(result)}\n\n(Puedes encadenar más acciones o usar 'extract'/'observe' para ver la pantalla).`;
         }
         else if (args.action === 'extract') {
-            const result = await stagehand.page.extract(args.target);
+            const result = await stagehand.extract(args.target);
             return `Resultados de extracción web: ${JSON.stringify(result)}`;
         }
         else if (args.action === 'observe') {
             let instruction = args.target;
-            // Si el user no envia instruction o pone "null", le pasamos el default
-            if (!instruction || instruction.length < 2) instruction = "encuentra todos los elementos principales interactivos (links, inputs, botones)";
-
-            const result = await stagehand.page.observe(instruction);
-            return `Elementos visualmente disponibles en pantalla listos para interactuar: ${JSON.stringify(result)}`;
+            if (!instruction || instruction.length < 2) instruction = 'find all interactive elements (links, inputs, buttons)';
+            const result = await stagehand.observe(instruction);
+            return `Elementos disponibles en pantalla: ${JSON.stringify(result)}`;
         }
 
         return 'Acción web desconocida u orden malformada.';
     } catch (e: any) {
-        return `Error crítico controlando el navegador: ${e.message}\nConsidera usar "observe" para entender mejor la página o "close" si la web te está bloqueando severamente.`;
+        return `Error controlando el navegador: ${e.message}\nConsidera usar "observe" para entender mejor la página o "close" para reiniciar el navegador.`;
     }
 }

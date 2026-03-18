@@ -7,13 +7,13 @@ export const searchWebTool = {
     type: 'function',
     function: {
         name: 'search_web',
-        description: 'Realiza una búsqueda en internet en tiempo real para obtener información actualizada, noticias, el clima, o datos que desconozcas. Actúa como tu buscador interno.',
+        description: 'Busca en internet usando palabras clave (tipo Google). SOLO para preguntas de investigación, noticias, datos actuales o consultas genéricas. PROHIBIDO usar esta herramienta si el usuario menciona una URL específica, pide navegar a una página concreta, rellenar un formulario, hacer login o acceder a una web en particular. Para ESO usa browser_automation.',
         parameters: {
             type: 'object',
             properties: {
                 query: {
                     type: 'string',
-                    description: 'Términos de búsqueda precisos que introducirías en Google (ej. "noticias tecnología de hoy España", "tiempo en Madrid", "precio Bitcoin").'
+                    description: 'Palabras clave de búsqueda (ej. "noticias tecnología de hoy", "tiempo Madrid"). NO pondr URL aquí.'
                 }
             },
             required: ['query'],
