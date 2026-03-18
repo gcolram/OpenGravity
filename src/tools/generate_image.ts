@@ -63,7 +63,3 @@ export async function executeGenerateImage(args: { prompt: string }): Promise<st
         return `FATAL ERROR: NO SERVERS. DO NOT RETRY THIS TOOL. Inform the user that the free server is down and there is no backup API key.`;
     }
 }
-
-return `Dile al usuario: "Lo siento, el servidor gratuito de imágenes está saturado y ha fallado, y no hay una OPENAI_API_KEY configurada para usar de respaldo."`;
-    }
-}
