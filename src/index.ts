@@ -1,4 +1,4 @@
-import { Bot } from 'grammy';
+import { Bot, InputFile } from 'grammy';
 import { config } from './config.js';
 import { processUserMessage } from './agent/index.js';
 
@@ -65,7 +65,6 @@ bot.on(['message:text', 'message:photo'], async (ctx) => {
             if (!finalText) finalText = '🖼️';
 
             // Descargar la imagen a memoria para asegurar envío rápido a Telegram
-            const { InputFile } = require('grammy');
             const imageRes = await fetch(imgUrl);
             const arrayBuffer = await imageRes.arrayBuffer();
             const buffer = Buffer.from(arrayBuffer);
