@@ -63,7 +63,14 @@ bot.on(['message:text', 'message:photo'], async (ctx) => {
             let finalText = response.replace(imageMatch[0], '').trim();
             // Evitar captions vacíos que Telegram podría rechazar
             if (!finalText) finalText = '🖼️';
-            await ctx.replyWithPhoto(imgUrl, { caption: finalText });
+
+            // Descargar la imagen a memoria para asegurar envío rápido a Telegram
+            const { InputFile } = require('grammy');
+            const imageRes = await fetch(imgUrl);
+            const arrayBuffer = await imageRes.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+
+            await ctx.replyWithPhoto(new InputFile(buffer, 'image.jpg'), { caption: finalText });
         } else {
             await ctx.reply(response);
         }
