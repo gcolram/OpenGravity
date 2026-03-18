@@ -66,10 +66,15 @@ bot.on(['message:text', 'message:photo'], async (ctx) => {
 
             // Descargar la imagen a memoria para asegurar envío rápido a Telegram
             const imageRes = await fetch(imgUrl);
-            const arrayBuffer = await imageRes.arrayBuffer();
-            const buffer = Buffer.from(arrayBuffer);
+            const contentType = imageRes.headers.get('content-type') || '';
 
-            await ctx.replyWithPhoto(new InputFile(buffer, 'image.jpg'), { caption: finalText });
+            if (!imageRes.ok || !contentType.includes('image')) {
+                await ctx.reply("❌ Ocurrió un error final al recuperar el archivo de imagen. Es posible que haya caducado el enlace o el proveedor lo haya rechazado.");
+            } else {
+                const arrayBuffer = await imageRes.arrayBuffer();
+                const buffer = Buffer.from(arrayBuffer);
+                await ctx.replyWithPhoto(new InputFile(buffer, 'image.jpg'), { caption: finalText });
+            }
         } else {
             await ctx.reply(response);
         }
