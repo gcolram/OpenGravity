@@ -79,6 +79,13 @@ export async function getBrowserSession(userId: number): Promise<Stagehand> {
         },
         localBrowserLaunchOptions: {
             headless: isHeadless,
+            // --no-sandbox es OBLIGATORIO en VPS/Linux para que Chrome pueda lanzarse
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',   // Evita crashes por /dev/shm pequeño en VPS
+                '--disable-gpu',
+            ],
             ...(executablePath ? { executablePath } : {}),  // Solo si lo encontramos
         },
         verbose: 0,
