@@ -1,5 +1,7 @@
 // @ts-ignore
 import google from 'googlethis';
+import { tavily } from '@tavily/core';
+import { config } from '../config.js';
 
 export const searchWebTool = {
     type: 'function',
@@ -22,6 +24,23 @@ export const searchWebTool = {
 
 export async function executeSearchWeb(args: { query: string }): Promise<string> {
     try {
+        if (config.TAVILY_API_KEY) {
+            console.log(`[Agente] Buscando en internet vía Tavily AI: "${args.query}"`);
+            const tvly = tavily({ apiKey: config.TAVILY_API_KEY });
+            const response = await tvly.search(args.query, { searchDepth: "basic", maxResults: 5 });
+
+            if (!response.results || response.results.length === 0) {
+                return `No se encontraron resultados en Tavily para "${args.query}".`;
+            }
+
+            const topResults = response.results.map((r: any, idx: number) => {
+                return `${idx + 1}. [${r.title}](${r.url})\n   Contenido: ${r.content}`;
+            });
+
+            return `Resultados de búsqueda en vivo (Tavily AI) para "${args.query}":\n\n${topResults.join('\n\n')}\n\nCon esta información, responde al usuario sintetizando los datos.`;
+        }
+
+        console.log(`[Agente] Buscando en internet vía Google (fallback gratuito): "${args.query}"`);
         const options = {
             page: 0,
             safe: false, // Opcional
