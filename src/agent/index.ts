@@ -37,16 +37,15 @@ export async function processUserMessage(userId: number, text: string, imageUrl?
     const history = await getHistory(userId, 15);
 
     // 3. Preparar el array de mensajes en memoria para este bucle de razonamiento
+    let activeClient = client;
     let activeModel = modelName;
+
     if (imageUrl) {
-        if (groq) {
-            activeModel = 'llama-3.2-11b-vision-preview';
-        } else {
-            const isVisionModel = /vision|gemini|gpt-4o|claude-3|pixtral|llava/i.test(modelName);
-            if (!isVisionModel) {
-                console.log(`[Agente] El modelo ${modelName} podría no soportar visión. Cambiando a google/gemini-2.5-flash temporalmente.`);
-                activeModel = 'google/gemini-2.5-flash';
-            }
+        if (openrouter) {
+            activeClient = openrouter;
+            activeModel = 'google/gemini-2.5-flash';
+        } else if (groq) {
+            throw new Error("Groq ha desactivado temporalmente sus modelos de visión. Por favor, configura tu OPENROUTER_API_KEY en el archivo .env para poder enviar imágenes al bot.");
         }
     }
 
@@ -74,7 +73,7 @@ export async function processUserMessage(userId: number, text: string, imageUrl?
 
         try {
             // Llamada al LLM
-            const completion = await client.chat.completions.create({
+            const completion = await activeClient.chat.completions.create({
                 messages,
                 model: activeModel,
                 tools: tools as any[],
