@@ -37,7 +37,7 @@ export async function executeBrowserAutomation(userId: number, args: { action: s
             // Usar el contexto de Playwright directamente para la navegación
             const pages = stagehand.context.pages();
             const page = pages.length > 0 ? pages[0] : await stagehand.context.newPage();
-            await page.goto(args.target, { waitUntil: 'networkidle', timeout: 30000 });
+            await page.goto(args.target, { waitUntil: 'networkidle', timeoutMs: 30000 });
             const pageTitle = await page.title();
             return `Navegación exitosa a ${args.target}. Título de la página: "${pageTitle}". Usa 'observe' para ver qué botones/links hay, o 'act' para interactuar directamente.`;
         }
