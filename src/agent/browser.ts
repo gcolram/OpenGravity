@@ -15,20 +15,27 @@ export async function getBrowserSession(userId: number): Promise<Stagehand> {
 
     console.log(`[Browser] Inicializando nuevo Headless Browser para el usuario ${userId}...`);
 
-    // Stagehand requiere OpenAI (gpt-4o) u Anthropic. Por defecto usa gpt-4o.
+    // Stagehand V3 requiere 'model' como ModelConfiguration (puede ser string o {modelName, apiKey})
     if (!config.OPENAI_API_KEY) {
-        throw new Error("El Agente Web requiere OPENAI_API_KEY (DALL-E 3 key) en el .env para usar Stagehand vision y DOM mapping.");
+        throw new Error('El Agente Web requiere OPENAI_API_KEY en el .env para usar Stagehand.');
     }
 
     // Detectar automáticamente si tenemos display (local con ventana) o servidor sin pantalla (VPS headless)
-    const isHeadless = process.env.NODE_ENV === 'production' || !process.env.DISPLAY && process.platform === 'linux';
+    const isHeadless = process.env.NODE_ENV === 'production' || (!process.env.DISPLAY && process.platform === 'linux');
     console.log(`[Browser] Modo: ${isHeadless ? '🖥️  Headless (Servidor/VPS)' : '🪟 Con ventana (Desarrollo Local)'}`);
 
+    // Usando la API V3 correcta de Stagehand
     const stagehand = new Stagehand({
         env: 'LOCAL',
-        modelName: 'gpt-4o', // Modelo optimizado para leer pantallas de navegador
-        modelClientOptions: { apiKey: config.OPENAI_API_KEY },
-        browserLaunchOptions: { headless: isHeadless },
+        model: {
+            modelName: 'gpt-4o',
+            apiKey: config.OPENAI_API_KEY,
+        },
+        localBrowserLaunchOptions: {
+            headless: isHeadless,
+        },
+        verbose: 0,
+        disablePino: true,
     } as any);
 
     await stagehand.init();
