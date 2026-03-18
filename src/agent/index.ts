@@ -65,13 +65,17 @@ export async function processUserMessage(userId: number, text: string, imageUrl?
     }
 
     const messages: any[] = [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: SYSTEM_PROMPT() },
         ...history.map((msg: ChatMessage) => {
-            let contentContent = msg.content;
+            let contentContent: any = msg.content;
             // Si el mensaje del historial tiene un array (imagen) y estamos usando un modelo que quizás no sea de visión, extraemos solo el texto
             if (Array.isArray(contentContent) && !imageUrl) {
-                const textObj = contentContent.find(c => c.type === 'text');
+                const textObj = contentContent.find((c: any) => c.type === 'text');
                 contentContent = textObj ? textObj.text : '[Imagen enviada previamente]';
+            }
+            // Evitar null content que crashea a Groq. Los mensajes 'tool' con null se marcan vacíos.
+            if (contentContent === null || contentContent === undefined) {
+                contentContent = '';
             }
             return {
                 role: msg.role,
@@ -91,6 +95,7 @@ export async function processUserMessage(userId: number, text: string, imageUrl?
             // Llamada al LLM con Fallback a OpenAI si falla
             let completion;
             try {
+
                 completion = await activeClient.chat.completions.create({
                     messages,
                     model: activeModel,
