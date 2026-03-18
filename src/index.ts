@@ -27,10 +27,11 @@ bot.command('start', async (ctx) => {
     await ctx.reply("¡Hola! Soy OpenGravity, tu asistente personal local de IA basado en Telegram.\n¿En qué puedo ayudarte hoy?");
 });
 
-// Manejador principal de mensajes de texto
-bot.on('message:text', async (ctx) => {
+// Manejador principal de mensajes de texto e imágenes
+bot.on(['message:text', 'message:photo'], async (ctx) => {
     const userId = ctx.from.id;
-    const text = ctx.message.text;
+    const text = ctx.message.text || ctx.message.caption || '';
+    let imageUrl: string | undefined;
 
     // Enviar indicador de 'escribiendo' para mejor experiencia de usuario
     try {
@@ -40,13 +41,32 @@ bot.on('message:text', async (ctx) => {
     }
 
     try {
-        console.log(`[User:${userId}] ${text}`);
+        // Extraer URL de la foto si la hay
+        if (ctx.message.photo) {
+            const photo = ctx.message.photo[ctx.message.photo.length - 1]; // Obtener la resolución más alta
+            const file = await ctx.api.getFile(photo.file_id);
+            imageUrl = `https://api.telegram.org/file/bot${config.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
+        }
+
+        console.log(`[User:${userId}] ${text} ${imageUrl ? '(+Imagen Adjunta)' : ''}`);
 
         // Llamar a nuestro motor de IA
-        const response = await processUserMessage(userId, text);
+        const response = await processUserMessage(userId, text, imageUrl);
 
         console.log(`[OpenGravity] ${response}`);
-        await ctx.reply(response);
+
+        // Parsear si la respuesta contiene una imagen generada
+        const imageMatch = response.match(/\[IMAGE:\s*(https?:\/\/[^\]]+)\]/i);
+
+        if (imageMatch) {
+            const imgUrl = imageMatch[1];
+            let finalText = response.replace(imageMatch[0], '').trim();
+            // Evitar captions vacíos que Telegram podría rechazar
+            if (!finalText) finalText = '🖼️';
+            await ctx.replyWithPhoto(imgUrl, { caption: finalText });
+        } else {
+            await ctx.reply(response);
+        }
     } catch (error: any) {
         console.error("Error Processing Message:", error);
         await ctx.reply(`Ocurrió un error en el sistema: ${error.message || 'Error desconocido'}`);

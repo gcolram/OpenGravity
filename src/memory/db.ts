@@ -21,14 +21,14 @@ export interface ChatMessage {
     id?: string;
     user_id: number;
     role: 'system' | 'user' | 'assistant' | 'tool';
-    content: string;
+    content: string | any[];
     timestamp?: any;
 }
 
 /**
  * Añade un nuevo mensaje al historial de conversación en Firestore.
  */
-export const addMessage = async (userId: number, role: ChatMessage['role'], content: string): Promise<void> => {
+export const addMessage = async (userId: number, role: ChatMessage['role'], content: string | any[]): Promise<void> => {
     try {
         const messagesRef = db.collection('users').doc(userId.toString()).collection('messages');
 

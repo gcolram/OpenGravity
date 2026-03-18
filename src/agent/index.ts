@@ -22,9 +22,16 @@ Debes comunicarte y pensar siempre en ESPAÑOL.`;
 const client = (groq || openrouter) as any;
 const modelName = groq ? 'llama-3.3-70b-versatile' : config.OPENROUTER_MODEL;
 
-export async function processUserMessage(userId: number, text: string): Promise<string> {
+export async function processUserMessage(userId: number, text: string, imageUrl?: string): Promise<string> {
+    const userMessageContent: any = imageUrl
+        ? [
+            { type: "text", text: text || "Por favor, describe esta imagen." },
+            { type: "image_url", image_url: { url: imageUrl } }
+        ]
+        : text;
+
     // 1. Guardar el mensaje del usuario en la base de datos persistente
-    await addMessage(userId, 'user', text);
+    await addMessage(userId, 'user', userMessageContent);
 
     // 2. Obtener el historial conversacional
     const history = await getHistory(userId, 15);
@@ -95,6 +102,53 @@ export async function processUserMessage(userId: number, text: string): Promise<
 
         } catch (error: any) {
             console.error("Error en la ejecución del Agente:", error);
+
+            // Intentar recuperar de errores 400 causados por mala sintaxis de llamadas a herramientas (ej. <function=...>)
+            if (error.status === 400 && error.error?.code === 'tool_use_failed') {
+                const failedGen = error.error?.failed_generation;
+                if (typeof failedGen === 'string') {
+                    console.log("[Agente] Intentando recuperar llamada a herramienta fallida...");
+                    const match = failedGen.match(/<function=([\w_]+).*?({.*?}).*?><\/function>/);
+
+                    if (match) {
+                        const functionName = match[1];
+                        try {
+                            // Limpiar escapes extras en el JSON
+                            const jsonStr = match[2].replace(/\\"/g, '"');
+                            const functionArgs = JSON.parse(jsonStr);
+                            console.log(`[Agente] Recuperada llamada a ${functionName}:`, functionArgs);
+
+                            const toolResult = await executeTool(functionName, functionArgs);
+
+                            // Añadimos la generación fallida y el resultado de la función para continuar
+                            messages.push({
+                                role: 'assistant',
+                                content: failedGen
+                            });
+                            messages.push({
+                                role: 'system',
+                                content: `La función ${functionName} fue ejecutada con éxito. Su resultado es: ${toolResult}\nContinúa respondiendo de forma natural.`
+                            });
+
+                            continue; // Reintentar la siguiente iteración
+                        } catch (e) {
+                            console.error("Error al parsear o ejecutar la herramienta recuperada:", e);
+                        }
+                    } else if (failedGen.includes('<function')) {
+                        console.log("[Agente] Match regex fallido para tool call manual, solicitando reintentar...");
+                        messages.push({
+                            role: 'assistant',
+                            content: failedGen
+                        });
+                        messages.push({
+                            role: 'system',
+                            content: "ERROR AL LLAMAR A LA HERRAMIENTA: Formato incorrecto. Por favor, asegúrate de NO usar tags <function>. Reintenta."
+                        });
+                        continue;
+                    }
+                }
+            }
+
             return `Ocurrió un error en mi procesamiento interno: ${error.message}`;
         }
     }
