@@ -40,7 +40,7 @@ export async function processUserMessage(userId: number, text: string, imageUrl?
     let activeModel = modelName;
     if (imageUrl) {
         if (groq) {
-            activeModel = 'llama-3.2-90b-vision-preview';
+            activeModel = 'llama-3.2-11b-vision-preview';
         } else {
             const isVisionModel = /vision|gemini|gpt-4o|claude-3|pixtral|llava/i.test(modelName);
             if (!isVisionModel) {
