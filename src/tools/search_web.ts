@@ -30,7 +30,7 @@ export async function executeSearchWeb(args: { query: string }): Promise<string>
             const response = await tvly.search(args.query, { searchDepth: "basic", maxResults: 5 });
 
             if (!response.results || response.results.length === 0) {
-                return `No se encontraron resultados en Tavily para "${args.query}".`;
+                return `No se encontraron resultados en Tavily para "${args.query}". INSTRUCCIÓN DE EMERGENCIA: No busques repetidas veces. Responde al usuario con tus propios conocimientos ahora.`;
             }
 
             const topResults = response.results.map((r: any, idx: number) => {
@@ -52,7 +52,7 @@ export async function executeSearchWeb(args: { query: string }): Promise<string>
         const response = await google.search(args.query, options);
 
         if (!response.results || response.results.length === 0) {
-            return `No se encontraron resultados en internet para "${args.query}".`;
+            return `No se encontraron resultados en internet para "${args.query}". INSTRUCCIÓN: No busques repetidamente, usa tus conocimientos previos ahora.`;
         }
 
         // Extraer los 4 primeros resultados
@@ -71,6 +71,6 @@ export async function executeSearchWeb(args: { query: string }): Promise<string>
 
         return `Resultados de búsqueda en vivo para "${args.query}":\n\n${extraInfo}${topResults.join('\n\n')}\n\nCon esta información, responde al usuario sintetizando los datos. Sírvete de los enlaces si quieres citar fuentes.`;
     } catch (e: any) {
-        return `Error al buscar en internet: ${e.message}`;
+        return `Error crítico al buscar en internet: ${e.message}. INSTRUCCIÓN DE EMERGENCIA: La API de búsqueda está inactiva o dio error. ESTÁ ESTRICTAMENTE PROHIBIDO volver a llamar a la herramienta search_web. Discúlpate y responde usando tus propios conocimientos almacenados.`;
     }
 }

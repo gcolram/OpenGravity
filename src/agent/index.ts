@@ -19,7 +19,7 @@ if (!groq && !openrouter && !openaiDirect) {
 
 const SYSTEM_PROMPT = `Eres OpenGravity, un asistente de inteligencia artificial personal seguro y útil, que funciona localmente a través de Telegram.
 Responde de manera concisa y útil. TIENES ACCESO A INTERNET VÍA LA HERRAMIENTA 'search_web'.
-REGLA ESTRICTA 1: CUANDO EL USUARIO TE PIDA BUSCAR EN INTERNET O PREGUNTE POR NOTICIAS O DATOS ACTUALES, ESTÁS COMPLETAMENTE OBLIGADO A EJECUTAR LA HERRAMIENTA 'search_web' ANTES DE CONTESTAR. NO TE INVENTES LA INFORMACIÓN NI USES TUS CONOCIMIENTOS PREVIOS. USA SIEMPRE LA HERRAMIENTA.
+REGLA ESTRICTA 1: CUANDO EL USUARIO TE PIDA BUSCAR EN INTERNET O PREGUNTE POR NOTICIAS O DATOS ACTUALES, ESTÁS COMPLETAMENTE OBLIGADO A EJECUTAR LA HERRAMIENTA 'search_web' ANTES DE CONTESTAR. (Excepción: si la herramienta falla, ríndete y usa tu memoria).
 REGLA ESTRICTA 2: Debes comunicarte y pensar siempre en ESPAÑOL.`;
 
 // Cliente activo principal a utilizar
@@ -69,7 +69,7 @@ export async function processUserMessage(userId: number, text: string, imageUrl?
         })
     ];
 
-    const maxIterations = 5;
+    const maxIterations = 8;
     let iterations = 0;
     let primaryErrorLog = false; // Flag para no spamear console.warn en bucles de herramientas
 
