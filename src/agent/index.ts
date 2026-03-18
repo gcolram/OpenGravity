@@ -9,18 +9,21 @@ const openrouter = config.OPENROUTER_API_KEY ? new OpenAI({
     baseURL: "https://openrouter.ai/api/v1",
     apiKey: config.OPENROUTER_API_KEY,
 }) : null;
+const openaiDirect = config.OPENAI_API_KEY ? new OpenAI({
+    apiKey: config.OPENAI_API_KEY,
+}) : null;
 
-if (!groq && !openrouter) {
-    throw new Error('No LLM client configured. Please set GROQ_API_KEY or OPENROUTER_API_KEY in .env');
+if (!groq && !openrouter && !openaiDirect) {
+    throw new Error('No LLM client configured. Please set GROQ_API_KEY, OPENROUTER_API_KEY or OPENAI_API_KEY in .env');
 }
 
 const SYSTEM_PROMPT = `Eres OpenGravity, un asistente de inteligencia artificial personal seguro y útil, que funciona localmente a través de Telegram.
 Responde de manera concisa y útil. Utiliza las herramientas disponibles de forma proactiva cuando te soliciten información que requiera una de ellas (por ejemplo, obtener la hora actual).
 Debes comunicarte y pensar siempre en ESPAÑOL.`;
 
-// Cliente activo a utilizar
-const client = (groq || openrouter) as any;
-const modelName = groq ? 'llama-3.3-70b-versatile' : config.OPENROUTER_MODEL;
+// Cliente activo principal a utilizar
+const client = (groq || openrouter || openaiDirect) as any;
+const modelName = groq ? 'llama-3.3-70b-versatile' : (openrouter ? config.OPENROUTER_MODEL : 'gpt-4o-mini');
 
 export async function processUserMessage(userId: number, text: string, imageUrl?: string): Promise<string> {
     const userMessageContent: any = imageUrl
@@ -72,13 +75,29 @@ export async function processUserMessage(userId: number, text: string, imageUrl?
         iterations++;
 
         try {
-            // Llamada al LLM
-            const completion = await activeClient.chat.completions.create({
-                messages,
-                model: activeModel,
-                tools: tools as any[],
-                tool_choice: 'auto',
-            });
+            // Llamada al LLM con Fallback a OpenAI si falla
+            let completion;
+            try {
+                completion = await activeClient.chat.completions.create({
+                    messages,
+                    model: activeModel,
+                    tools: tools as any[],
+                    tool_choice: 'auto',
+                });
+            } catch (primaryError: any) {
+                // FALLBACK KEY: Si la petición falla (ej. cuotas de OpenRouter, modelo no soportado) y hay clave de OpenAI
+                if (openaiDirect && activeClient !== openaiDirect) {
+                    console.warn(`[Agente] Falló el modelo primario (${primaryError.message}). Ejecutando fallback mágico de seguridad con OpenAI (gpt-4o-mini)...`);
+                    completion = await openaiDirect.chat.completions.create({
+                        messages,
+                        model: 'gpt-4o-mini',
+                        tools: tools as any[],
+                        tool_choice: 'auto',
+                    });
+                } else {
+                    throw primaryError; // Relanzar si no hay fallback disponible
+                }
+            }
 
             const responseMessage = completion.choices[0]?.message;
             if (!responseMessage) {
