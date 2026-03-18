@@ -18,8 +18,9 @@ if (!groq && !openrouter && !openaiDirect) {
 }
 
 const SYSTEM_PROMPT = `Eres OpenGravity, un asistente de inteligencia artificial personal seguro y útil, que funciona localmente a través de Telegram.
-Responde de manera concisa y útil. TIENES ACCESO A INTERNET: Utiliza SIEMPRE la herramienta 'search_web' de forma proactiva cuando el usuario te pregunte por noticias recientes, datos actuales, el clima, o cualquier información que no sepas o necesite verificación en tiempo real. 
-Debes comunicarte y pensar siempre en ESPAÑOL.`;
+Responde de manera concisa y útil. TIENES ACCESO A INTERNET VÍA LA HERRAMIENTA 'search_web'.
+REGLA ESTRICTA 1: CUANDO EL USUARIO TE PIDA BUSCAR EN INTERNET O PREGUNTE POR NOTICIAS O DATOS ACTUALES, ESTÁS COMPLETAMENTE OBLIGADO A EJECUTAR LA HERRAMIENTA 'search_web' ANTES DE CONTESTAR. NO TE INVENTES LA INFORMACIÓN NI USES TUS CONOCIMIENTOS PREVIOS. USA SIEMPRE LA HERRAMIENTA.
+REGLA ESTRICTA 2: Debes comunicarte y pensar siempre en ESPAÑOL.`;
 
 // Cliente activo principal a utilizar
 const client = (groq || openrouter || openaiDirect) as any;
@@ -70,6 +71,7 @@ export async function processUserMessage(userId: number, text: string, imageUrl?
 
     const maxIterations = 5;
     let iterations = 0;
+    let primaryErrorLog = false; // Flag para no spamear console.warn en bucles de herramientas
 
     while (iterations < maxIterations) {
         iterations++;
@@ -87,7 +89,10 @@ export async function processUserMessage(userId: number, text: string, imageUrl?
             } catch (primaryError: any) {
                 // FALLBACK KEY: Si la petición falla (ej. cuotas de OpenRouter, modelo no soportado) y hay clave de OpenAI
                 if (openaiDirect && activeClient !== openaiDirect) {
-                    console.warn(`[Agente] Falló el modelo primario (${primaryError.message}). Ejecutando fallback mágico de seguridad con OpenAI (gpt-4o-mini)...`);
+                    if (!primaryErrorLog) {
+                        console.warn(`[Agente] Falló el modelo primario (${primaryError.message}). Ejecutando fallback mágico de seguridad con OpenAI (gpt-4o-mini)...`);
+                        primaryErrorLog = true;
+                    }
                     completion = await openaiDirect.chat.completions.create({
                         messages,
                         model: 'gpt-4o-mini',
@@ -99,13 +104,18 @@ export async function processUserMessage(userId: number, text: string, imageUrl?
                 }
             }
 
+            // DEBUG
+            if (activeClient !== openaiDirect || primaryErrorLog) primaryErrorLog = false; // Reset log flag if needed
+
             const responseMessage = completion.choices[0]?.message;
             if (!responseMessage) {
                 return "Error: No se recibió respuesta del modelo.";
             }
 
-            // Añadir el mensaje del asistente a la memoria temporal (necesario para la secuencia de llamadas a herramientas)
-            messages.push(responseMessage);
+            // Añadir el mensaje del asistente a la memoria temporal, SANITIZADO para que Groq no crashee con propiedades de OpenAI (ej. 'annotations')
+            const safeMessage: any = { role: responseMessage.role, content: responseMessage.content };
+            if (responseMessage.tool_calls) safeMessage.tool_calls = responseMessage.tool_calls;
+            messages.push(safeMessage);
 
             const toolCalls = responseMessage.tool_calls;
 

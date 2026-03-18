@@ -35,8 +35,7 @@ export async function executeGenerateImage(args: { prompt: string }): Promise<st
 
         const contentType = testRes.headers.get('content-type') || '';
         if (testRes.ok && contentType.includes('image')) {
-            return `ÉXITO. La imagen se ha generado gratuitamente en este enlace temporal: ${url}
-Instrucciones obligatorias: DEBES incluir en tu respuesta la cadena: [IMAGE: ${url}]`;
+            return `¡ÉXITO! La imagen se ha generado gratuitamente. Informa de esto al usuario y adjunta esta URL usando exclusivamente el siguiente tag especial: [IMAGE: ${url}]`;
         } else {
             throw new Error(`Invalid content-type from Pollinations: ${contentType}`);
         }
@@ -54,13 +53,17 @@ Instrucciones obligatorias: DEBES incluir en tu respuesta la cadena: [IMAGE: ${u
                 });
                 const openaiUrl = response.data?.[0]?.url;
                 if (!openaiUrl) throw new Error("OpenAI no devolvió una URL válida");
-                return `ÉXITO. Imagen Premium generada con DALL-E 3. Usa exactamente esta URL: ${openaiUrl}
-Instrucciones obligatorias: DEBES incluir en tu respuesta la cadena: [IMAGE: ${openaiUrl}]`;
+                return `¡ÉXITO! La imagen Premium se ha generado con DALL-E 3. Informa al usuario y adjunta la URL usando exclusivamente el tag especial: [IMAGE: ${openaiUrl}]`;
             } catch (openaiErr: any) {
-                return `Dile al usuario: "Lo siento, todos los generadores de imágenes están caídos, incluyendo la API de respaldo DALL-E (${openaiErr.message})."`;
+                console.error("[DALL-E Fallback Error]", openaiErr.message);
+                return `FATAL ERROR: API DALL-E FAIL. DO NOT RETRY THIS TOOL. Inform the user in plain text that image generation servers are completely down. (${openaiErr.message})`;
             }
         }
 
-        return `Dile al usuario: "Lo siento, el servidor gratuito de imágenes está saturado y ha fallado, y no hay una OPENAI_API_KEY configurada para usar de respaldo."`;
+        return `FATAL ERROR: NO SERVERS. DO NOT RETRY THIS TOOL. Inform the user that the free server is down and there is no backup API key.`;
+    }
+}
+
+return `Dile al usuario: "Lo siento, el servidor gratuito de imágenes está saturado y ha fallado, y no hay una OPENAI_API_KEY configurada para usar de respaldo."`;
     }
 }
