@@ -87,6 +87,7 @@ export async function processUserMessage(userId: number, text: string, imageUrl?
     const maxIterations = 8;
     let iterations = 0;
     let primaryErrorLog = false; // Flag para no spamear console.warn en bucles de herramientas
+    let stickyFallback = false; // Si Groq falla por cuota, remainá en OpenAI todo el bucle
 
     while (iterations < maxIterations) {
         iterations++;
@@ -95,6 +96,10 @@ export async function processUserMessage(userId: number, text: string, imageUrl?
             // Llamada al LLM con Fallback a OpenAI si falla
             let completion;
             try {
+                // Si el modelo primario ya falló antes (cuota, etc.), saltar directo al fallback
+                if (stickyFallback && openaiDirect) {
+                    throw new Error('Sticky fallback activo');
+                }
 
                 completion = await activeClient.chat.completions.create({
                     messages,
@@ -108,6 +113,7 @@ export async function processUserMessage(userId: number, text: string, imageUrl?
                     if (!primaryErrorLog) {
                         console.warn(`[Agente] Falló el modelo primario (${primaryError.message}). Ejecutando fallback mágico de seguridad con OpenAI (gpt-4o-mini)...`);
                         primaryErrorLog = true;
+                        stickyFallback = true; // Activar el modo pegajoso: usalizar OpenAI el resto del bucle
                     }
                     completion = await openaiDirect.chat.completions.create({
                         messages,
