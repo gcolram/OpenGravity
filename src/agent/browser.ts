@@ -20,11 +20,16 @@ export async function getBrowserSession(userId: number): Promise<Stagehand> {
         throw new Error("El Agente Web requiere OPENAI_API_KEY (DALL-E 3 key) en el .env para usar Stagehand vision y DOM mapping.");
     }
 
+    // Detectar automáticamente si tenemos display (local con ventana) o servidor sin pantalla (VPS headless)
+    const isHeadless = process.env.NODE_ENV === 'production' || !process.env.DISPLAY && process.platform === 'linux';
+    console.log(`[Browser] Modo: ${isHeadless ? '🖥️  Headless (Servidor/VPS)' : '🪟 Con ventana (Desarrollo Local)'}`);
+
     const stagehand = new Stagehand({
         env: 'LOCAL',
         modelName: 'gpt-4o', // Modelo optimizado para leer pantallas de navegador
         modelClientOptions: { apiKey: config.OPENAI_API_KEY },
-    });
+        browserLaunchOptions: { headless: isHeadless },
+    } as any);
 
     await stagehand.init();
     activeSessions.set(userId, stagehand);
