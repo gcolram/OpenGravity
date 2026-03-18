@@ -18,9 +18,20 @@ if (!groq && !openrouter && !openaiDirect) {
 }
 
 const SYSTEM_PROMPT = `Eres OpenGravity, un asistente de inteligencia artificial personal seguro y útil, que funciona localmente a través de Telegram.
-Responde de manera concisa y útil. TIENES ACCESO A INTERNET VÍA LA HERRAMIENTA 'search_web'.
-REGLA ESTRICTA 1: CUANDO EL USUARIO TE PIDA BUSCAR EN INTERNET O PREGUNTE POR NOTICIAS O DATOS ACTUALES, ESTÁS COMPLETAMENTE OBLIGADO A EJECUTAR LA HERRAMIENTA 'search_web' ANTES DE CONTESTAR. (Excepción: si la herramienta falla, ríndete y usa tu memoria).
-REGLA ESTRICTA 2: Debes comunicarte y pensar siempre en ESPAÑOL.`;
+Responde de manera concisa y útil. TIENES ACCESO A INTERNET Y A UN NAVEGADOR AUTÓNOMO.
+
+CAPACIDADES DEL NAVEGADOR (WEB AGENT):
+- Usando la herramienta 'browser_automation', puedes navegar por internet por el usuario (ir a URLs, rellenar formularios, hacer clicks, leer datos).
+- La sesión de navegador se mantiene VIVA entre tus respuestas. Si necesitas interactuar en varios pasos:
+  Paso 1: Llamas a browser_automation ({ action: "goto", target: "url" }) -> la web carga.
+  Paso 2: Llamas a browser_automation ({ action: "act", target: "click en login" }) -> haces login.
+- PERMISOS: Si el trámite implica hacer compras, aceptar cosas legales definitivas, o enviar formularios críticos, DEBES pausar enviando un mensaje al usuario preguntando "¿Me autorizas a enviar la solicitud?". NO uses la herramienta de nuevo hasta que el usuario te diga "Sí". Cuando te responda, tu navegador seguirá abierto listo para el click final.
+- ACABANDO: Cuando termines todas las tareas en una web exitosamente, o si ya no hace falta el navegador, usa { action: "close" } para liberar memoria.
+
+REGLAS ESTRICTAS:
+1. PREGUNTAS SOBRE NOTICIAS/DATOS ACTUALES: Usa 'search_web' SIEMPRE. (Excepción: si la API falla, usa tu memoria).
+2. TAREAS COMPLEJAS EN WEBS: Usa 'browser_automation'.
+3. Debes comunicarte y pensar siempre en ESPAÑOL.`;
 
 // Cliente activo principal a utilizar
 const client = (groq || openrouter || openaiDirect) as any;
@@ -128,7 +139,7 @@ export async function processUserMessage(userId: number, text: string, imageUrl?
                     console.log(`[Agente] Ejecutando herramienta ${functionName} con argumentos:`, functionArgs);
 
                     // Ejecutar herramienta
-                    const toolResult = await executeTool(functionName, functionArgs);
+                    const toolResult = await executeTool(userId, functionName, functionArgs);
 
                     // Añadir el resultado a la secuencia de mensajes para que el LLM lo lea en la siguiente iteración
                     messages.push({
@@ -167,7 +178,7 @@ export async function processUserMessage(userId: number, text: string, imageUrl?
                             const functionArgs = JSON.parse(jsonStr);
                             console.log(`[Agente] Recuperada llamada a ${functionName}:`, functionArgs);
 
-                            const toolResult = await executeTool(functionName, functionArgs);
+                            const toolResult = await executeTool(userId, functionName, functionArgs);
 
                             // Añadimos la generación fallida y el resultado de la función para continuar
                             messages.push({
