@@ -44,7 +44,9 @@ export async function executeBrowserAutomation(userId: number, args: { action: s
 
         if (args.action === 'goto') {
             const page = await getCurrentPage(stagehand);
-            await page.goto(args.target, { waitUntil: 'networkidle', timeout: 30000 });
+            await page.goto(args.target, { waitUntil: 'load', timeout: 30000 });
+            // Esperar un momento extra para que el JS termine de renderizar
+            await page.waitForTimeout(2000);
             const pageTitle = await page.title();
             console.log(`[Browser] ✅ Navegado a: "${pageTitle}"`);
             return `Navegación exitosa a ${args.target}. Título de la página: "${pageTitle}". Ahora usa 'extract' con las instrucciones de qué datos leer, o 'observe' para ver los botones disponibles.`;
